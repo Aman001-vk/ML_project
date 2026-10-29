@@ -1,0 +1,16 @@
+{% extends "dashboard_base.html" %}
+
+{% block result_panel %}
+<section class="result-panel panel" aria-labelledby="result-title">
+    <div id="prediction-event" class="sr-only" data-student-id="{{ student_id }}" data-outcome="{{ outcome }}" data-event-id="{{ prediction_event_id }}"></div>
+    <div class="result-topline"><div><div class="section-kicker">PREDICTION RESULT</div><p class="result-id">Student ID <strong>{{ student_id }}</strong></p></div><span class="estimate-label">ML-generated estimate</span></div>
+    <div class="result-highlight outcome-{{ outcome|lower }}"><span class="result-icon" aria-hidden="true">{% if outcome == 'Graduate' %}✓{% elif outcome == 'Enrolled' %}↗{% else %}◇{% endif %}</span><div><p class="section-kicker">MOST LIKELY OUTCOME</p><h1 id="result-title">{{ outcome }}</h1></div></div>
+    <p class="result-explanation">The saved model selected this class for the retrieved record. This is an estimate of a pattern in historical data, not a guarantee of an individual outcome.</p>
+    <p class="result-responsibility"><strong>Use with care:</strong> Do not use this result as the sole basis for academic decisions. Enrolled outcomes are less reliably identified; human review and additional context are essential.</p>
+    {% if probabilities %}
+    <div class="probability-block"><div class="subheading-row"><h3>Model probability estimates</h3><span>All classes</span></div><div class="probability-list">
+        {% for item in probabilities %}<div class="probability-item probability-{{ item.name|lower }}"><div class="probability-label"><span>{{ item.name }}</span><strong>{{ "%.1f"|format(item.percent) }}%</strong></div><progress max="100" value="{{ item.percent }}" aria-label="{{ item.name }} model probability estimate {{ item.percent }} percent">{{ item.percent }}%</progress></div>{% endfor %}
+    </div><p class="helper-text">Values are model probability estimates, not guarantees or calibrated certainty.</p></div>
+    {% endif %}
+</section>
+{% endblock %}

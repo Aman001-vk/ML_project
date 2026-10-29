@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f8fc">
+    <meta name="description" content="Estimate student academic outcomes with a machine-learning demonstration.">
+    <title>Student Outcome Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<div class="site-shell">
+    <header class="site-header">
+        <a class="brand" href="{{ url_for('home') }}" aria-label="Student Outcome Prediction home">
+            <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m2.5 9 9.5-5 9.5 5-9.5 5-9.5-5Z"/><path d="M6.5 11.2v4.1c3.2 2.4 7.8 2.4 11 0v-4.1M21.5 9v6"/></svg></span>
+            <span class="brand-copy"><strong>Student Outcome Prediction</strong><small>AI-powered insights for academic outcomes</small></span>
+        </a>
+        <span class="model-badge"><i aria-hidden="true"></i>ML Model <b>·</b> Logistic Regression</span>
+    </header>
+
+    <main id="main-content">
+        <section class="prediction-card panel" id="predictor" aria-labelledby="predict-title">
+            <div class="section-kicker">STUDENT LOOKUP</div>
+            <h1 id="predict-title">Predict Student Outcome</h1>
+            <p class="section-intro">Enter a student ID to retrieve the record and estimate the likely academic outcome.</p>
+            {% if error %}<div class="alert" role="alert"><span aria-hidden="true">!</span>{{ error }}</div>{% endif %}
+            <form id="prediction-form" method="post" action="{{ url_for('predict') }}">
+                <input type="hidden" name="prediction_event_id" value="{{ prediction_event_id }}">
+                <label for="student_id">Student ID</label>
+                <div class="input-row">
+                    <span class="input-prefix" aria-hidden="true">ID</span>
+                    <input id="student_id" name="student_id" type="text" inputmode="numeric" autocomplete="off" maxlength="20" pattern="[0-9]{1,20}" placeholder="e.g. 1001" value="{{ student_id or '' }}" aria-describedby="id-help" required>
+                </div>
+                <p class="field-help" id="id-help">Use the numeric ID from the project dataset.</p>
+                <button class="primary-button" id="predict-button" type="submit"><span class="button-label">Predict Outcome</span><span class="button-spinner" aria-hidden="true"></span><span class="button-arrow" aria-hidden="true">→</span></button>
+                <p class="submit-status" id="submit-status" role="status" aria-live="polite"></p>
+            </form>
+            <p class="privacy-line"><span aria-hidden="true">ⓘ</span> Student ID is used only to retrieve the record; it is not a model input.</p>
+        </section>
+
+        {% block result_panel %}{% endblock %}
+
+        {% if not outcome and not error %}
+        <section class="lookup-empty" aria-live="polite"><span class="empty-icon" aria-hidden="true">⌕</span><p>Enter a Student ID to view the student's information and predicted outcome.</p></section>
+        {% endif %}
+
+        {% if outcome %}
+        <section class="student-info panel" aria-labelledby="student-info-title">
+            <div class="section-heading student-heading"><div><div class="section-kicker">RETRIEVED DATASET RECORD</div><h2 id="student-info-title">Student information</h2></div><div class="student-id-value"><span>Student ID</span><strong>{{ student_id }}</strong></div></div>
+            {% for section in academic_sections %}
+            <div class="academic-group"><h3>{{ section.name }}</h3><dl class="academic-grid">{% for field in section.fields %}<div class="academic-field"><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></div>{% endfor %}</dl></div>
+            {% endfor %}
+            {% if recorded_outcome %}<div class="historical-outcome"><div><strong>Recorded historical outcome</strong><span>Actual dataset label; shown separately from the model prediction above.</span></div><b>{{ recorded_outcome }}</b></div>{% endif %}
+        </section>
+        {% endif %}
+
+        <section class="outcomes-section" aria-labelledby="outcomes-title">
+            <div class="section-heading"><div><div class="section-kicker">POSSIBLE CLASSES</div><h2 id="outcomes-title">Outcome categories</h2></div><p>Only the highlighted category reflects this prediction.</p></div>
+            <div class="outcome-grid">
+                {% for label, icon, description, color in [('Dropout','◇','Estimated to be most associated with dropout.','dropout'), ('Enrolled','↗','Estimated to be most associated with continued enrollment.','enrolled'), ('Graduate','✓','Estimated to be most associated with graduation.','graduate')] %}
+                <article class="outcome-card {{ color }}{% if outcome == label %} selected{% endif %}" {% if outcome == label %}aria-current="true"{% endif %}>
+                    <span class="outcome-icon" aria-hidden="true">{{ icon }}</span><div><h3>{{ label }}</h3><p>{{ description }}</p></div>
+                    {% if outcome == label %}<span class="selected-label">Predicted</span>{% endif %}
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="performance-section panel" id="performance" aria-labelledby="performance-title">
+            <div class="section-heading performance-heading"><div><div class="section-kicker">OVERALL MODEL EVALUATION</div><h2 id="performance-title">Model Performance — Held-Out Test Results</h2></div></div>
+            <p class="section-intro compact">Balanced Logistic Regression · offline test results, not live performance.</p>
+            <div class="metric-grid">
+                <article class="metric-card"><span>Accuracy</span><strong>69.94<small>%</small></strong></article>
+                <article class="metric-card"><span>Macro precision</span><strong>66.52<small>%</small></strong></article>
+                <article class="metric-card"><span>Macro recall</span><strong>66.77<small>%</small></strong></article>
+                <article class="metric-card featured"><span>Macro F1-score</span><strong>65.93<small>%</small></strong></article>
+                <article class="metric-card"><span>Weighted F1-score</span><strong>71.21<small>%</small></strong></article>
+            </div>
+            <div class="visual-grid">
+                <article class="visual-card"><div class="subheading-row"><div><div class="section-kicker">PER-CLASS TEST METRICS</div><h3>Precision, recall and F1-score</h3></div><span>Percent</span></div>
+                    <div class="legend"><span><i class="legend-p"></i>Precision</span><span><i class="legend-r"></i>Recall</span><span><i class="legend-f"></i>F1-score</span></div>
+                    <div class="class-chart">
+                    {% for name, precision, recall, f1 in [('Dropout',78.23,68.31,72.93), ('Enrolled',38.36,55.97,45.52), ('Graduate',82.96,76.02,79.34)] %}
+                        <div class="class-row"><div class="class-name">{{ name }}{% if name == 'Enrolled' %}<small>Lower performance</small>{% endif %}</div><div class="bars">{% for metric, value in [('precision',precision),('recall',recall),('f1',f1)] %}<div class="bar-track" aria-label="{{ name }} {{ metric }} {{ value }} percent"><span class="bar-fill {{ metric }}" style="width:{{ value }}%"></span><span class="bar-value">{{ "%.2f"|format(value) }}%</span></div>{% endfor %}</div></div>
+                    {% endfor %}
+                    </div>
+                </article>
+                <article class="visual-card matrix-card"><div class="subheading-row"><div><div class="section-kicker">CLASSIFICATION ERRORS</div><h3>Confusion matrix</h3></div><span>Actual × predicted</span></div>
+                    <p class="helper-text">Rows show actual classes; columns show model predictions.</p>
+                    <div class="table-scroll"><table class="confusion-table"><caption class="sr-only">Held-out test confusion matrix, actual classes as rows and predicted classes as columns</caption><thead><tr><th scope="col">Actual / predicted</th><th scope="col">Dropout</th><th scope="col">Enrolled</th><th scope="col">Graduate</th></tr></thead><tbody><tr><th scope="row">Dropout</th><td class="correct">194</td><td>63</td><td>27</td></tr><tr><th scope="row">Enrolled</th><td>28</td><td class="moderate">89</td><td>42</td></tr><tr><th scope="row">Graduate</th><td>26</td><td>80</td><td class="correct">336</td></tr></tbody></table></div>
+                    <p class="matrix-note">Enrolled is the weakest-performing class and needs added caution.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="history-section panel" id="history" aria-labelledby="history-title">
+            <div class="section-heading"><div><div class="section-kicker">THIS BROWSER ONLY</div><h2 id="history-title">Prediction history</h2></div><button type="button" class="quiet-button" id="clear-history">Clear history</button></div>
+            <p class="section-intro compact">Successful predictions are stored in this browser only, not uploaded or synchronized.</p>
+            <p class="history-message" id="history-message" role="status" aria-live="polite"></p>
+            <div class="history-empty" id="history-empty"><span aria-hidden="true">◷</span><strong>No predictions saved yet</strong><p>Your successful lookups will appear here.</p></div>
+            <ol class="history-list" id="history-list" aria-label="Recent prediction history"></ol>
+        </section>
+
+        <section class="disclaimer" aria-labelledby="disclaimer-title"><span class="disclaimer-mark" aria-hidden="true">!</span><div><div class="section-kicker">RESPONSIBLE USE</div><h2 id="disclaimer-title">Predictions are estimates, not guarantees.</h2><p>Predictions are estimates based on historical data, not guarantees of future outcomes. The model is less reliable for the Enrolled class than for Dropout and Graduate. Do not use predictions as the sole basis for academic decisions; human review and additional context are essential.</p></div></section>
+    </main>
+    <footer class="site-footer"><span>Student Outcome Prediction System</span><span>Academic machine-learning demonstration</span></footer>
+</div>
+</body>
+</html>
